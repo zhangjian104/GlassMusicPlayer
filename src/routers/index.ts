@@ -2,53 +2,68 @@ import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router
 import { defineComponent, h, defineAsyncComponent } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 
+// 从环境变量中获取路由模式配置，默认为 'hash' 模式
 const mode = import.meta.env.VITE_ROUTER_MODE || 'hash'
 
+// 路由模式映射表，用于根据配置创建对应的 history 对象
 const routerMode: Record<string, () => ReturnType<typeof createWebHashHistory>> = {
-  hash: () => createWebHashHistory(),
-  history: () => createWebHistory(),
+  hash: () => createWebHashHistory(), // Hash 模式 (URL 中带有 #)
+  history: () => createWebHistory(),  // History 模式 (干净的 URL，需要服务端配置支持)
 }
 
+// 获取路由的 history 实例
 const getHistory = () => {
   const createHistory = routerMode[mode]
+  // 如果环境变量中配置了有效的模式，则使用该模式
   if (typeof createHistory === 'function') {
     return createHistory()
   }
-  // 默认使用 hash 模式
+  // 兜底策略：默认使用 hash 模式
   return createWebHashHistory()
 }
 
-// 响应式组件工厂：根据窗口宽度在桌面端与移动端组件之间切换
-// desktopLoader 与 mobileLoader 为对应组件的动态导入函数
+/**
+ * 响应式组件工厂函数：根据当前窗口宽度，在桌面端与移动端组件之间动态切换
+ * 这是一个非常巧妙的设计，使得同一套路由可以完美适配两套不同的 UI 视图。
+ *
+ * @param desktopLoader 桌面端组件的动态导入函数 (如: () => import('...'))
+ * @param mobileLoader 移动端组件的动态导入函数 (如: () => import('...'))
+ */
 const responsive = (desktopLoader: () => Promise<any>, mobileLoader: () => Promise<any>) =>
   defineComponent({
     name: 'ResponsiveRouteComponent',
     setup() {
-      // 使用媒体查询监听窗口是否为移动端尺寸（阈值 768px）
+      // 使用 VueUse 的媒体查询钩子，实时监听窗口宽度是否小于等于 768px (即判断是否为移动端)
       const isMobile = useMediaQuery('(max-width: 768px)')
-      // 异步组件定义，按需加载对应端的页面组件
+      
+      // 使用 defineAsyncComponent 将传入的 import 函数转化为异步组件
+      // 这样可以在路由命中且设备匹配时才去真正请求对应的组件代码，实现代码分割和按需加载
       const Desktop = defineAsyncComponent(desktopLoader)
       const Mobile = defineAsyncComponent(mobileLoader)
+      
+      // render 函数：根据 isMobile 的响应式状态，动态渲染对应的组件
       return () => h(isMobile.value ? Mobile : Desktop)
     },
   })
 
+// 创建并配置 Vue Router 实例
 const router = createRouter({
-  history: getHistory(),
-  strict: false,
-  scrollBehavior: () => ({ left: 0, top: 0 }),
+  history: getHistory(), // 使用前面获取到的 history 实例
+  strict: false,         // 关闭严格模式 (允许路由末尾带有斜杠)
+  scrollBehavior: () => ({ left: 0, top: 0 }), // 每次路由切换后，页面滚动到顶部
   routes: [
     {
       path: '/',
-      // 布局层：根据尺寸切换桌面与移动端布局
+      // 根布局组件：同样使用响应式加载，区分桌面端布局(侧边栏+顶部栏等)和移动端布局(底部导航等)
       component: responsive(
         () => import('@/layout/index.vue'),
         () => import('@/layout/mobile/index.vue')
       ),
+      // 所有子路由都会被渲染在根布局的 <router-view> 中
       children: [
         {
           path: '/',
-          name: 'home',
+          name: 'home', // 首页：发现音乐
           component: responsive(
             () => import('@/pages/index.vue'),
             () => import('@/pages/mobile/index.vue')
@@ -56,15 +71,15 @@ const router = createRouter({
         },
         {
           path: '/playlist/:id',
-          name: 'playlist',
+          name: 'playlist', // 歌单详情页，:id 为动态路由参数
           component: responsive(
             () => import('@/pages/playlist.vue'),
             () => import('@/pages/mobile/playlist.vue')
           ),
         },
-        {
+        /* {
           path: '/mv-list',
-          name: 'mv-list',
+          name: 'mv-list', // MV 列表页
           component: responsive(
             () => import('@/pages/mv-list.vue'),
             () => import('@/pages/mobile/mv-list.vue')
@@ -72,15 +87,15 @@ const router = createRouter({
         },
         {
           path: '/mv-player/:id',
-          name: 'mv-player',
+          name: 'mv-player', // MV 播放页面
           component: responsive(
             () => import('@/pages/mv-player.vue'),
             () => import('@/pages/mobile/mv-player.vue')
           ),
-        },
+        }, */
         {
           path: '/recent',
-          name: 'recent',
+          name: 'recent', // 最近播放页面
           component: responsive(
             () => import('@/pages/recent.vue'),
             () => import('@/pages/mobile/recent.vue')
@@ -88,15 +103,15 @@ const router = createRouter({
         },
         {
           path: '/my-music',
-          name: 'my-music',
+          name: 'my-music', // 我的音乐库页面
           component: responsive(
             () => import('@/pages/my-music.vue'),
-            () => import('@/pages/mobile/recent.vue')
+            () => import('@/pages/mobile/recent.vue') // 移动端可能暂时复用了 recent 的组件
           ),
         },
         {
           path: '/likes',
-          name: 'likes',
+          name: 'likes', // 我喜欢的音乐页面
           component: responsive(
             () => import('@/pages/likes.vue'),
             () => import('@/pages/mobile/likes.vue')
@@ -104,7 +119,7 @@ const router = createRouter({
         },
         {
           path: '/search',
-          name: 'search',
+          name: 'search', // 搜索页面
           component: responsive(
             () => import('@/pages/search.vue'),
             () => import('@/pages/mobile/search.vue')
@@ -112,7 +127,7 @@ const router = createRouter({
         },
         {
           path: '/charts',
-          name: 'charts',
+          name: 'charts', // 排行榜页面
           component: responsive(
             () => import('@/pages/charts.vue'),
             () => import('@/pages/mobile/charts.vue')
@@ -120,23 +135,23 @@ const router = createRouter({
         },
         {
           path: '/artists',
-          name: 'artists',
+          name: 'artists', // 歌手分类列表页面
           component: responsive(
             () => import('@/pages/artists.vue'),
-            () => import('@/pages/artists.vue')
+            () => import('@/pages/artists.vue') // 桌面端和移动端共用了同一个组件，内部可能自己做了适配
           ),
         },
         {
           path: '/new-albums',
-          name: 'new-albums',
+          name: 'new-albums', // 新碟上架页面
           component: responsive(
             () => import('@/pages/new-albums.vue'),
-            () => import('@/pages/new-albums.vue')
+            () => import('@/pages/new-albums.vue') // 同样共用了组件
           ),
         },
         {
           path: '/artist/:id',
-          name: 'artist',
+          name: 'artist', // 歌手详情页面
           component: responsive(
             () => import('@/pages/artist.vue'),
             () => import('@/pages/mobile/artist.vue')
@@ -144,7 +159,7 @@ const router = createRouter({
         },
         {
           path: '/song/:id',
-          name: 'song',
+          name: 'song', // 单曲详情页面
           component: responsive(
             () => import('@/pages/song.vue'),
             () => import('@/pages/mobile/song.vue')
@@ -152,7 +167,7 @@ const router = createRouter({
         },
         {
           path: '/album/:id',
-          name: 'album',
+          name: 'album', // 专辑详情页面
           component: responsive(
             () => import('@/pages/album.vue'),
             () => import('@/pages/mobile/album.vue')
@@ -160,7 +175,7 @@ const router = createRouter({
         },
         {
           path: '/local-music',
-          name: 'local-music',
+          name: 'local-music', // 本地音乐页面
           component: responsive(
             () => import('@/pages/local-music.vue'),
             () => import('@/pages/mobile/local-music.vue')
@@ -168,7 +183,7 @@ const router = createRouter({
         },
         {
           path: '/settings',
-          name: 'settings',
+          name: 'settings', // 设置页面
           component: responsive(
             () => import('@/pages/settings.vue'),
             () => import('@/pages/mobile/settings.vue')
@@ -178,4 +193,5 @@ const router = createRouter({
     },
   ],
 })
+
 export default router
