@@ -46,19 +46,24 @@ const { banners, playlists, newSongs, mvs, artists, isLoading } = toRefs(state)
 const loadHomeData = async () => {
   state.isLoading = true
   try {
-    const [b, p, s, m, a] = await Promise.all([
+    const [b, p, s, m] = await Promise.all([
       banner({ type: 2 }),
       personalized({ limit: 6 }),
       personalizedNewsong({ limit: 6 }),
       personalizedMv(),
-      topArtists({ limit: 10 }),
     ])
+
+    const authorsRes = await fetch('http://127.0.0.1:8788/api/authors/popular').then(r => r.json()).catch(() => [])
 
     state.banners = transformBanners(b as Record<string, unknown>, 5)
     state.playlists = transformPlaylists(p as Record<string, unknown>, 6, t('home.playlistFallback'))
     state.newSongs = transformSongs(s as Record<string, unknown>, 6)
     state.mvs = transformMVs(m as Record<string, unknown>, 4)
-    state.artists = transformArtists(a as Record<string, unknown>, 10)
+    state.artists = authorsRes.map((author: any) => ({
+      id: author.id,
+      name: author.name,
+      picUrl: `http://127.0.0.1:5174/api/authors/avatar?key=${author.avatar_path}#`
+    }))
   } finally {
     state.isLoading = false
   }
