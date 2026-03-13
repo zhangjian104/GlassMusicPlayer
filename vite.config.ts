@@ -17,9 +17,11 @@ export default defineConfig(({ mode }) => {
             // 代理配置
             proxy: {
                 '/api': {
-                    target: 'https://www.lulufm.app/api/proxy/netease',
+                    target: 'https://neteasecloudmusicapi-2.onrender.com', // 因为 lulufm.app 本地 443 不通，退回到原始接口
                     changeOrigin: true,
+                    // 将开头的 /api 删掉
                     rewrite: path => path.replace(/^\/api/, ''),
+                    secure: false, // 不验证 SSL 证书
                 },
                 ...createProxy(viteEnv.VITE_PROXY),
             },
