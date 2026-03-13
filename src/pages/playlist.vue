@@ -1,12 +1,22 @@
 <script setup lang="ts">
+// ==========================================
+// 导入外部依赖和模块
+// ==========================================
+// 导入 API 接口请求方法：书单详情、书单所有章节、新版评论、搜索
 import { playlistDetail, playlistTrackAll, commentNew, search } from '@/api';
+// 导入公共的播放操作组合式函数（包含：播放全部、随机播放）
 import { usePlayActions } from '@/composables/usePlayActions';
+// 导入项目通用的类型定义
 import { PlaylistInfo, PlaylistSong, CommentItem } from '@/typings';
+// 导入 UI 组件：图片懒加载、按钮、标签组
 import LazyImage from '@/components/Ui/LazyImage.vue';
 import Button from '@/components/Ui/Button.vue';
 import TabGroup from '@/components/Ui/TabGroup.vue';
+// 导入格式化工具函数（将数字转换为带单位的字符串，如万、亿）
 import { formatCount } from '@/utils/time';
+// 导入国际化插件 hooks
 import { useI18n } from 'vue-i18n';
+// 导入数据转换器，用于将接口返回的原始数据格式化为前端 UI 需要的数据结构
 import {
     transformPlaylistDetail,
     transformSongs,
@@ -15,60 +25,96 @@ import {
     type PlaylistData,
 } from '@/utils/transformers';
 
+// ==========================================
+// 路由与参数获取
+// ==========================================
+// 获取当前路由实例，用于读取 URL 中的参数
 const route = useRoute();
+// 获取当前页面 URL 参数中的书单/歌单 ID
 const playlistId = route.params.id;
 
+// ==========================================
+// 接口与状态定义
+// ==========================================
+// 相似书单/歌单的数据类型接口
 interface SimilarPlaylist {
-    id: number | string;
-    name: string;
-    coverImgUrl: string;
-    trackCount?: number;
-    playCount?: number;
-    creator?: { nickname: string };
+    id: number | string; // 书单 ID
+    name: string;        // 书单名称
+    coverImgUrl: string; // 封面图片地址
+    trackCount?: number; // 包含的章节(歌曲)数
+    playCount?: number;  // 播放量
+    creator?: { nickname: string }; // 创建者信息
 }
 
+// 页面整体状态管理的类型接口
 interface PlaylistState {
-    activeTab: 'songs' | 'comments' | 'similar';
-    playlistInfo: PlaylistInfo;
-    isCollected: boolean;
-    songs: SongData[];
-    newComment: string;
-    comments: CommentItem[];
-    isPageLoading: boolean;
-    similarPlaylists: SimilarPlaylist[];
+    activeTab: 'songs' | 'comments' | 'similar'; // 当前选中的 Tab：章节列表 / 评论 / 相似推荐
+    playlistInfo: PlaylistInfo;                  // 书单详细信息（封面、标题、作者等）
+    isCollected: boolean;                        // 是否已收藏（用于前端状态模拟切换）
+    songs: SongData[];                           // 章节(歌曲)列表数据
+    newComment: string;                          // 用户输入的待发表新评论内容
+    comments: CommentItem[];                     // 评论列表数据
+    isPageLoading: boolean;                      // 页面是否正在加载中（控制骨架屏的显示和隐藏）
+    similarPlaylists: SimilarPlaylist[];         // 相似书单推荐列表
 }
 
+// ==========================================
+// 状态初始化与解构
+// ==========================================
+// 使用 reactive 定义页面响应式状态，集中管理页面数据
 const state = reactive<PlaylistState>({
-    activeTab: 'songs',
+    activeTab: 'songs', // 默认显示章节列表
     playlistInfo: {} as PlaylistInfo,
     isCollected: false,
     songs: [],
     newComment: '',
     comments: [],
-    isPageLoading: true,
+    isPageLoading: true, // 初始进入时设为 true，展示骨架屏
     similarPlaylists: [],
 });
+// 将状态解构为 ref 形式，以便在 Vue 模板中直接使用对应的变量（如 activeTab、songs 等）
 const { activeTab, playlistInfo, songs, newComment, comments, isPageLoading, similarPlaylists } =
     toRefs(state);
+
+// 获取播放相关的全局操作方法：播放全部，随机播放
 const { playAll: playAllAction, shufflePlay: shufflePlayAction } = usePlayActions();
+// 获取国际化翻译函数
 const { t } = useI18n();
 
+// ==========================================
+// 辅助变量与方法
+// ==========================================
+// 预定义渐变色背景数组，用于在没有图片（如用户头像）时作为占位背景色
 const gradients: string[] = ['from-purple-500 to-pink-500'];
+// 预定义符号/emoji 数组，用于装饰性展示
 const emojis: string[] = ['🎵', '🎶', '♪', '♫', '🎼'];
 
+// 随机从预定义渐变色中选取一个颜色类的函数
 const pickGradient = (): string => gradients[Math.floor(Math.random() * gradients.length)];
 
+// ==========================================
+// 数据加载方法
+// ==========================================
+
+/**
+ * 加载书单/歌单的详情信息以及包含的所有章节(歌曲)列表
+ * @param {number} id 书单 ID
+ */
 const loadPlaylist = async (id: number) => {
     try {
+        // 使用 Promise.all 并发请求：同时获取"详情"和"所有曲目(章节)"
+        // 这样可以减少网络请求的整体等待时间
         const [detailRes, tracksRes] = await Promise.all([
             playlistDetail({ id }),
-            playlistTrackAll({ id, limit: 100 }),
+            playlistTrackAll({ id, limit: 100 }), // 限制一次性最多获取100条
         ]);
 
+        // 对原始的详情响应数据进行转换适配，提取出前端组件真正需要的字段
         const detail = transformPlaylistDetail(
             detailRes as Record<string, unknown>,
-            t('home.playlistFallback')
+            t('home.playlistFallback') // 提取失败时使用的默认兜底文案
         );
+        // 如果转换成功，更新到页面的响应式状态中
         if (detail) {
             state.playlistInfo = {
                 name: detail.name,
@@ -86,30 +132,41 @@ const loadPlaylist = async (id: number) => {
             };
         }
 
+        // 对原始的列表响应数据进行转换，映射为统一的 SongData 格式
         state.songs = transformSongs(tracksRes as Record<string, unknown>, 100);
     } catch {
+        // 捕获异常（实际项目中可在此处增加全局的错误提示或日志上报）
     } finally {
+        // 无论请求成功还是失败，请求结束后都必须取消页面的骨架屏加载状态
         state.isPageLoading = false;
     }
 };
 
+/**
+ * 加载当前书单下的评论数据
+ * @param {number} id 书单 ID
+ */
 const loadComments = async (id: number) => {
     try {
+        // 发送新版评论接口请求：type=2 (代表歌单/书单类型), sortType=1 (按时间降序排序)
         const res = await commentNew({ id, type: 2, sortType: 1, pageNo: 1, pageSize: 10 });
+        // 兼容不同的后端数据返回结构
         const list = (res as any)?.data?.comments || (res as any)?.comments || [];
         if (Array.isArray(list)) {
+            // 将原始评论数据映射为前端 UI 所需的 CommentItem 结构
             state.comments = list.map((c: any, i: number) => ({
                 username: c?.user?.nickname || t('comments.user'),
-                avatarGradient: gradients[i % gradients.length],
-                time: c?.time ? new Date(c.time).toLocaleString() : '',
+                avatarGradient: gradients[i % gradients.length], // 给没有头像的用户分配一个随机渐变背景色
+                time: c?.time ? new Date(c.time).toLocaleString() : '', // 时间戳转本地易读字符串
                 content: c?.content || '',
-                likes: c?.likedCount || 0,
+                likes: c?.likedCount || 0, // 点赞数
                 avatarUrl: c?.user?.avatarUrl || '',
+                // 嵌套解析并映射"回复(引用的评论)"信息
                 replies: (c?.beReplied || []).map((r: any) => ({
                     username: r?.user?.nickname || t('comments.user'),
                     avatarUrl: r?.user?.avatarUrl || '',
                     avatarGradient: gradients[(i + 1) % gradients.length],
-                    time: '',
+                    time: '', // 原始接口如果未返回回复的时间，则留空
                     content: r?.content || '',
                 })),
             }));
@@ -117,10 +174,17 @@ const loadComments = async (id: number) => {
     } catch {}
 };
 
+/**
+ * 加载相似的书单/歌单推荐（实现方式：通过搜索当前书单名称的方式模拟相似推荐）
+ * @param {string} name 当前书单的名称
+ */
 const loadSimilarPlaylists = async (name: string) => {
     try {
+        // 调用搜索接口：type=1000 代表专门搜索歌单/书单
         const res = await search({ keywords: name, type: 1000 });
+        // 从搜索结果中提取并转换数据，限制最多取 12 个
         const { playlists } = transformSearchPlaylists(res as Record<string, unknown>, 12);
+        // 映射并保存到状态的相似推荐列表中
         state.similarPlaylists = playlists.map(pl => ({
             id: pl.id,
             name: pl.name,
@@ -131,28 +195,38 @@ const loadSimilarPlaylists = async (name: string) => {
     } catch {}
 };
 
-// 初始化加载播放列表
+// ==========================================
+// 生命周期与监听器
+// ==========================================
+
+// 组件初始化挂载时（首次进入页面），解析 URL 中的 ID 并加载对应数据
 onMounted(() => {
+    // 初始化加载播放列表
     const idNum = Number(playlistId);
     if (!Number.isNaN(idNum) && idNum > 0) {
-        state.isPageLoading = true;
+        state.isPageLoading = true; // 显示骨架屏
         loadPlaylist(idNum);
         loadComments(idNum);
     }
 });
 
-// 监听路由参数变化，加载新的播放列表
+// 监听路由参数（URL ID）的变化
+// 场景说明：当用户从底部的"相似推荐"点击了另一个书单时，页面组件不会销毁重建（因为用的是同一个路由组件），
+// 此时只会触发 URL 参数变化。我们需要监听到这个变化，并重新发起请求加载新书单的数据。
 watch(
     () => Number(route.params.id),
     idNum => {
+        // 监听路由参数变化，加载新的播放列表
         if (!Number.isNaN(idNum) && idNum > 0) {
-            state.isPageLoading = true;
+            state.isPageLoading = true; // 重新显示骨架屏
             loadPlaylist(idNum);
             loadComments(idNum);
         }
     }
 );
 
+// 监听当前书单名称的变化
+// 场景说明：当书单详情加载完毕并获取到名称后，以此名称作为关键词去请求获取"相似推荐"数据。
 watch(
     () => state.playlistInfo.name,
     name => {
@@ -160,49 +234,79 @@ watch(
     }
 );
 
+// ==========================================
+// 用户交互与操作方法
+// ==========================================
+
+/**
+ * 提交新的评论
+ * 注意：由于没有真实的用户登录状态，此处仅做前端的纯 UI 交互模拟，不会真实调用接口发送到服务器。
+ */
 const submitComment = () => {
-    if (!state.newComment.trim()) return;
+    if (!state.newComment.trim()) return; // 拦截并忽略纯空格的空内容
     const comment = {
-        username: t('common.me'),
+        username: t('common.me'), // 显示昵称为"我"
         avatar: t('common.me'),
         avatarGradient: 'from-pink-400 to-purple-500',
-        time: t('common.justNow'),
-        content: state.newComment,
+        time: t('common.justNow'), // 发表时间显示为"刚刚"
+        content: state.newComment, // 用户输入的内容
         likes: 0,
         avatarUrl: '',
         replies: [],
     };
+    // 将新构造的评论对象插入到评论列表的最前方
     state.comments.unshift(comment);
-    state.newComment = '';
+    state.newComment = ''; // 提交完成后清空输入框
 };
 
+/**
+ * 播放全部：将当前列表的所有章节加入全局播放器，并从第一项开始播放
+ */
 const playAll = () => playAllAction(state.songs);
 
+/**
+ * 随机播放：将当前列表的所有章节加入全局播放器，并启用打乱的随机顺序进行播放
+ */
 const shufflePlay = () => shufflePlayAction(state.songs);
 
+/**
+ * 切换收藏状态（前端纯 UI 交互模拟，无真实接口调用）
+ */
 const toggleCollect = () => {
     state.isCollected = !state.isCollected;
 };
 
+/**
+ * 分享操作：优先调用设备原生的分享面板（如果浏览器支持），否则降级将当前页面链接复制到系统剪贴板
+ */
 const sharePlaylist = async () => {
     const url = location.origin + location.pathname + `#/playlist/${playlistId}`;
     const title = String((state.playlistInfo as any)?.name || t('home.playlistFallback'));
     const text = String((state.playlistInfo as any)?.description || '');
     try {
         if (navigator.share) {
+            // 如果设备/浏览器支持 Web Share API（如移动端设备常用）
             await navigator.share({ title, text, url });
         } else {
+            // 否则降级使用剪贴板 API 复制链接
             await navigator.clipboard.writeText(url);
         }
     } catch {}
 };
 
+// ==========================================
+// Tab 配置与计算属性
+// ==========================================
+
+// 定义页面主体内容区 Tab 选项卡的静态配置（包含唯一键名 key、用于多语言翻译的 labelKey、图标名）
 const tabs = [
     { key: 'songs', labelKey: 'playlist.tabs.songs', icon: 'icon-[mdi--music-note]' },
     { key: 'comments', labelKey: 'playlist.tabs.comments', icon: 'icon-[mdi--comment-text]' },
     { key: 'similar', labelKey: 'playlist.tabs.similar', icon: 'icon-[mdi--playlist-music]' },
 ] as const;
 
+// 动态计算属性：基于当前状态中各数组的数据长度，拼接出每个 Tab 标题上需要显示的数量徽标
+// 例如："章节 (50)"、"评论 (12)"
 const tabsWithCount = computed(() =>
     tabs.map(tab => ({
         ...tab,
