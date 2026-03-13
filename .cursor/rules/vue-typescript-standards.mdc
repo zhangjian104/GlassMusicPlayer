@@ -1,0 +1,26 @@
+---
+description: Vue 3 与 TypeScript 前端编码规范及项目避坑指南
+globs: **/*.{vue,ts,js}
+alwaysApply: false
+---
+
+# Vue 3 & TS 编码规范
+
+## 技术栈规范
+1. **框架声明**：始终使用 Vue 3 组合式 API (`<script setup lang="ts">`)。
+2. **状态管理**：使用 Pinia 进行状态管理。
+3. **响应式设计**：本项目具备移动端与桌面端分别独立的组件设计。在修改 UI 时，请留意 `src/routers/index.ts` 中的动态组件解析逻辑，并考虑响应式钩子 `useMediaQuery`。
+4. **格式化**：工程已配置 Prettier。必须遵循 `.prettierrc.json` 规范 (不使用分号，单引号，`printWidth: 100`)。不要随意修改既定的代码风格。
+5. **类型安全**：保持严格的 TypeScript 类型约束，避免使用 `any`（除非是在快速兼容原版 JS 代码的过渡期）。
+
+## 项目特有踩坑指南
+### 1. 图片渲染参数污染 (`?param=` 导致 400 错误)
+原版代码中的很多组件 (如 `<LazyImage>`) 会在其内部或者模板层强制向图片 url 追加类似 `?param=100y100` 的参数以向网易云请求裁剪图片。
+- **坑点**：这会导致向本地有声小说后端请求资源时（如 `/api/authors/avatar`），由于云存储对象键名不匹配而抛出 HTTP `400 Bad Request`。
+- **解决方案**：在不能大范围重构前端图片组件的情况下，在拼接本地图片 URL 时**必须在末尾加上 `#`**（例如：`url + '#'`），以截断浏览器请求中的 query 参数。
+  
+  正确示例：
+  ```typescript
+  // 使用 # 隔断后续组件中强制拼接的 ?param 字符串
+  picUrl: `http://127.0.0.1:5174/api/authors/avatar?key=${author.avatar_path}#`
+  ```
