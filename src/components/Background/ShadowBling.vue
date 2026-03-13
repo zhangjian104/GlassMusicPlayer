@@ -1,34 +1,39 @@
 <template>
-  <div ref="containerRef" :class="className" :style="style" class="relative w-full h-full overflow-hidden"></div>
+    <div
+        ref="containerRef"
+        :class="className"
+        :style="style"
+        class="relative h-full w-full overflow-hidden"
+    ></div>
 </template>
 
 <script setup lang="ts">
-import { type CSSProperties, useTemplateRef, onMounted, onUnmounted, watch } from 'vue'
-import { Renderer, Program, Mesh, Color, Triangle, Vec2 } from 'ogl'
+import { type CSSProperties, useTemplateRef, onMounted, onUnmounted, watch } from 'vue';
+import { Renderer, Program, Mesh, Color, Triangle, Vec2 } from 'ogl';
 
 interface ShadowBlingProps {
-  bgColors?: string[] // [base, highlight1, highlight2]
-  speed?: number
-  intensity?: number
-  className?: string
-  style?: CSSProperties
+    bgColors?: string[]; // [base, highlight1, highlight2]
+    speed?: number;
+    intensity?: number;
+    className?: string;
+    style?: CSSProperties;
 }
 
 const props = withDefaults(defineProps<ShadowBlingProps>(), {
-  bgColors: () => ['#000000', '#ffffff', '#808080'],
-  speed: 1.0,
-  intensity: 1.0,
-  className: '',
-  style: () => ({}),
-})
+    bgColors: () => ['#000000', '#ffffff', '#808080'],
+    speed: 1.0,
+    intensity: 1.0,
+    className: '',
+    style: () => ({}),
+});
 
-const containerRef = useTemplateRef<HTMLDivElement>('containerRef')
-let renderer: Renderer | null = null
-let program: Program | null = null
-let mesh: Mesh | null = null
-let animationId: number
-const mouse = new Vec2(0.5, 0.5)
-const targetMouse = new Vec2(0.5, 0.5)
+const containerRef = useTemplateRef<HTMLDivElement>('containerRef');
+let renderer: Renderer | null = null;
+let program: Program | null = null;
+let mesh: Mesh | null = null;
+let animationId: number;
+const mouse = new Vec2(0.5, 0.5);
+const targetMouse = new Vec2(0.5, 0.5);
 
 const VERT = `#version 300 es
 in vec2 position;
@@ -38,7 +43,7 @@ void main() {
   vUv = uv;
   gl_Position = vec4(position, 0.0, 1.0);
 }
-`
+`;
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -127,88 +132,91 @@ void main() {
 
   fragColor = vec4(color, 1.0);
 }
-`
+`;
 
 const init = () => {
-  if (!containerRef.value) return
+    if (!containerRef.value) return;
 
-  renderer = new Renderer({ alpha: true })
-  const gl = renderer.gl
-  gl.clearColor(0, 0, 0, 0)
-  
-  function resize() {
-    if (!containerRef.value) return
-    renderer?.setSize(containerRef.value.offsetWidth, containerRef.value.offsetHeight)
-    program?.uniforms.uResolution.value.set(gl.canvas.width, gl.canvas.height)
-  }
-  
-  window.addEventListener('resize', resize)
-  containerRef.value.appendChild(gl.canvas)
+    renderer = new Renderer({ alpha: true });
+    const gl = renderer.gl;
+    gl.clearColor(0, 0, 0, 0);
 
-  const geometry = new Triangle(gl)
-  
-  program = new Program(gl, {
-    vertex: VERT,
-    fragment: FRAG,
-    uniforms: {
-      uTime: { value: 0 },
-      uResolution: { value: new Vec2(gl.canvas.width, gl.canvas.height) },
-      uMouse: { value: new Vec2(0.5, 0.5) },
-      uColor1: { value: new Color(props.bgColors[0]) },
-      uColor2: { value: new Color(props.bgColors[1]) },
-      uColor3: { value: new Color(props.bgColors[2]) },
-      uSpeed: { value: props.speed },
-      uIntensity: { value: props.intensity },
-    },
-  })
+    function resize() {
+        if (!containerRef.value) return;
+        renderer?.setSize(containerRef.value.offsetWidth, containerRef.value.offsetHeight);
+        program?.uniforms.uResolution.value.set(gl.canvas.width, gl.canvas.height);
+    }
 
-  mesh = new Mesh(gl, { geometry, program })
-  
-  resize()
-  requestAnimationFrame(update)
+    window.addEventListener('resize', resize);
+    containerRef.value.appendChild(gl.canvas);
 
-  // Mouse move listener
-  window.addEventListener('mousemove', onMouseMove)
-}
+    const geometry = new Triangle(gl);
+
+    program = new Program(gl, {
+        vertex: VERT,
+        fragment: FRAG,
+        uniforms: {
+            uTime: { value: 0 },
+            uResolution: { value: new Vec2(gl.canvas.width, gl.canvas.height) },
+            uMouse: { value: new Vec2(0.5, 0.5) },
+            uColor1: { value: new Color(props.bgColors[0]) },
+            uColor2: { value: new Color(props.bgColors[1]) },
+            uColor3: { value: new Color(props.bgColors[2]) },
+            uSpeed: { value: props.speed },
+            uIntensity: { value: props.intensity },
+        },
+    });
+
+    mesh = new Mesh(gl, { geometry, program });
+
+    resize();
+    requestAnimationFrame(update);
+
+    // Mouse move listener
+    window.addEventListener('mousemove', onMouseMove);
+};
 
 const onMouseMove = (e: MouseEvent) => {
-  if (!containerRef.value) return
-  const rect = containerRef.value.getBoundingClientRect()
-  const x = (e.clientX - rect.left) / rect.width
-  const y = 1.0 - (e.clientY - rect.top) / rect.height // Flip Y for WebGL
-  targetMouse.set(x, y)
-}
+    if (!containerRef.value) return;
+    const rect = containerRef.value.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = 1.0 - (e.clientY - rect.top) / rect.height; // Flip Y for WebGL
+    targetMouse.set(x, y);
+};
 
 const update = (t: number) => {
-  animationId = requestAnimationFrame(update)
-  
-  if (!program || !renderer || !mesh) return
+    animationId = requestAnimationFrame(update);
 
-  program.uniforms.uTime.value = t * 0.001
-  
-  // Smooth mouse
-  mouse.lerp(targetMouse, 0.05)
-  program.uniforms.uMouse.value.copy(mouse)
-  
-  renderer.render({ scene: mesh })
-}
+    if (!program || !renderer || !mesh) return;
+
+    program.uniforms.uTime.value = t * 0.001;
+
+    // Smooth mouse
+    mouse.lerp(targetMouse, 0.05);
+    program.uniforms.uMouse.value.copy(mouse);
+
+    renderer.render({ scene: mesh });
+};
 
 onMounted(() => {
-  init()
-})
+    init();
+});
 
 onUnmounted(() => {
-  cancelAnimationFrame(animationId)
-  window.removeEventListener('resize', () => {}) // Need proper cleanup
-  window.removeEventListener('mousemove', onMouseMove)
-  renderer?.gl.canvas.remove()
-})
+    cancelAnimationFrame(animationId);
+    window.removeEventListener('resize', () => {}); // Need proper cleanup
+    window.removeEventListener('mousemove', onMouseMove);
+    renderer?.gl.canvas.remove();
+});
 
-watch(() => props.bgColors, (newColors) => {
-  if (program) {
-    program.uniforms.uColor1.value = new Color(newColors[0])
-    program.uniforms.uColor2.value = new Color(newColors[1])
-    program.uniforms.uColor3.value = new Color(newColors[2])
-  }
-})
+watch(
+    () => props.bgColors,
+    newColors => {
+        if (program) {
+            program.uniforms.uColor1.value = new Color(newColors[0]);
+            program.uniforms.uColor2.value = new Color(newColors[1]);
+            program.uniforms.uColor3.value = new Color(newColors[2]);
+        }
+    }
+);
 </script>

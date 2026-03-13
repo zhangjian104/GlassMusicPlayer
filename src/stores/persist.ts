@@ -2,7 +2,7 @@
  * Pinia 持久化配置
  * 基于 pinia-plugin-persistedstate，将指定的 state 字段存储到 localStorage
  */
-import { PersistenceOptions } from 'pinia-plugin-persistedstate'
+import { PersistenceOptions } from 'pinia-plugin-persistedstate';
 
 /**
  * 生成 Pinia Store 的持久化配置
@@ -11,12 +11,12 @@ import { PersistenceOptions } from 'pinia-plugin-persistedstate'
  * @returns PersistenceOptions 配置对象
  */
 const piniaPersistConfig = (key: string, paths?: string[]) => {
-  const persist: PersistenceOptions = {
-    key,
-    storage: localStorage,
-    pick: paths,
-  }
-  return persist
-}
+    const persist: PersistenceOptions = {
+        key,
+        storage: localStorage,
+        pick: paths,
+    };
+    return persist;
+};
 
-export default piniaPersistConfig
+export default piniaPersistConfig;

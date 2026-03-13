@@ -370,10 +370,10 @@ export PORT=9000
 
 ```javascript
 // 例子
-const url = `http://localhost:3000/song/url?id=33894312&proxy=http://121.196.226.246:84`
+const url = `http://localhost:3000/song/url?id=33894312&proxy=http://121.196.226.246:84`;
 fetch(url).then(function () {
-  // do what you want
-})
+    // do what you want
+});
 
 // 结果
 // {"data":[{"id":33894312,"url":"http://m10.music.126.net/20180104125640/930a968b3fb04908b733506b3833e60b/ymusic/0fd6/4f65/43ed/a8772889f38dfcb91c04da915b301617.mp3","br":320000,"size":10691439,"md5":"a8772889f38dfcb91c04da915b301617","code":200,"expi":1200,"type":"mp3","gain":-2.0E-4,"fee":0,"uf":null,"payed":0,"flag":0,"canExtend":false}],"code": 200}
@@ -386,33 +386,33 @@ v3.3.0 后支持使用 PAC 代理,如 `?proxy=http://192.168.0.1/proxy.pac`
 v3.31.0 后支持 Node.js 调用,导入的方法为`module`内的文件名,返回内容包含`status`和`body`,`status`为状态码,`body`为请求返回内容,参考`module_example` 文件夹下的 `test.js`
 
 ```js
-const { login_cellphone, user_cloud } = require('NeteaseCloudMusicApi')
+const { login_cellphone, user_cloud } = require('NeteaseCloudMusicApi');
 async function main() {
-  try {
-    const result = await login_cellphone({
-      phone: '手机号',
-      password: '密码',
-    })
-    console.log(result)
-    const result2 = await user_cloud({
-      cookie: result.body.cookie, // 凭证
-    })
-    console.log(result2.body)
-  } catch (error) {
-    console.log(error)
-  }
+    try {
+        const result = await login_cellphone({
+            phone: '手机号',
+            password: '密码',
+        });
+        console.log(result);
+        const result2 = await user_cloud({
+            cookie: result.body.cookie, // 凭证
+        });
+        console.log(result2.body);
+    } catch (error) {
+        console.log(error);
+    }
 }
-main()
+main();
 ```
 
 ## 支持 TypeScript
 
 ```ts
 // test.ts
-import { banner } from 'NeteaseCloudMusicApi'
+import { banner } from 'NeteaseCloudMusicApi';
 banner({ type: 0 }).then(res => {
-  console.log(res)
-})
+    console.log(res);
+});
 ```
 
 ## 更新到 v3.0 说明
@@ -2056,71 +2056,71 @@ tags: 歌单标签
 
 1. 发送评论
 
-   **必选参数**
+    **必选参数**
 
-   `t`:1 发送, 2 回复
+    `t`:1 发送, 2 回复
 
-   `type`: 数字,资源类型,对应歌曲,mv,专辑,歌单,电台,视频对应以下类型
+    `type`: 数字,资源类型,对应歌曲,mv,专辑,歌单,电台,视频对应以下类型
 
-   ```
-   0: 歌曲
+    ```
+    0: 歌曲
 
-   1: mv
+    1: mv
 
-   2: 歌单
+    2: 歌单
 
-   3: 专辑
+    3: 专辑
 
-   4: 电台
+    4: 电台
 
-   5: 视频
+    5: 视频
 
-   6: 动态
-   ```
+    6: 动态
+    ```
 
-   `id`:对应资源 id
+    `id`:对应资源 id
 
-   `content` :要发送的内容
+    `content` :要发送的内容
 
-   `commentId` :回复的评论 id (回复评论时必填)
+    `commentId` :回复的评论 id (回复评论时必填)
 
-   **调用例子** : `/comment?t=1&type=1&id=5436712&content=test` (往广岛之恋 mv 发送评论: test)
+    **调用例子** : `/comment?t=1&type=1&id=5436712&content=test` (往广岛之恋 mv 发送评论: test)
 
-   注意：如给动态发送评论，则不需要传 id，需要传动态的 `threadId`,如：`/comment?t=1&type=6&threadId=A_EV_2_6559519868_32953014&content=test`
+    注意：如给动态发送评论，则不需要传 id，需要传动态的 `threadId`,如：`/comment?t=1&type=6&threadId=A_EV_2_6559519868_32953014&content=test`
 
 2. 删除评论
 
-   **必选参数**
+    **必选参数**
 
-   `t`:0 删除
+    `t`:0 删除
 
-   `type`: 数字,资源类型,对应歌曲,mv,专辑,歌单,电台,视频对应以下类型
+    `type`: 数字,资源类型,对应歌曲,mv,专辑,歌单,电台,视频对应以下类型
 
-   ```
-   0: 歌曲
+    ```
+    0: 歌曲
 
-   1: mv
+    1: mv
 
-   2: 歌单
+    2: 歌单
 
-   3: 专辑
+    3: 专辑
 
-   4: 电台节目
+    4: 电台节目
 
-   5: 视频
+    5: 视频
 
-   6: 动态
+    6: 动态
 
-   7: 电台
+    7: 电台
 
-   ```
+    ```
 
-   `id`:对应资源 id
-   `content` :内容 id,可通过 `/comment/mv` 等接口获取
+    `id`:对应资源 id
+    `content` :内容 id,可通过 `/comment/mv` 等接口获取
 
-   **调用例子** : `/comment?t=0&type=1&id=5436712&commentId=1535550516319` (在广岛之恋 mv 删除评论)
+    **调用例子** : `/comment?t=0&type=1&id=5436712&commentId=1535550516319` (在广岛之恋 mv 删除评论)
 
-   注意：如给动态删除评论，则不需要传 id，需要传动态的 `threadId`,如：`/comment?t=0&type=6&threadId=A_EV_2_6559519868_32953014&commentId=1419516382`
+    注意：如给动态删除评论，则不需要传 id，需要传动态的 `threadId`,如：`/comment?t=0&type=6&threadId=A_EV_2_6559519868_32953014&commentId=1419516382`
 
 ### banner
 
