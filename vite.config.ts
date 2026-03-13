@@ -16,6 +16,15 @@ export default defineConfig(({ mode }) => {
             host: true,
             // 代理配置
             proxy: {
+                '/sapi': {
+                    target: 'http://127.0.0.1:8788',
+                    changeOrigin: true,
+                    rewrite: path => path.replace(/^\/sapi/, '/api'),
+                },
+                '/r2': {
+                    target: 'http://127.0.0.1:5174',
+                    changeOrigin: true,
+                },
                 '/api': {
                     target: 'https://neteasecloudmusicapi-2.onrender.com', // 因为 lulufm.app 本地 443 不通，退回到原始接口
                     changeOrigin: true,

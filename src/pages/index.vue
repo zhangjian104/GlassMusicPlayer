@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { banner, topPlaylist, topSong, topArtists, personalizedMv } from '@/api';
+import { banner, topPlaylist, topSong, topArtists, personalizedMv, getPopularAuthors } from '@/api';
 import { useI18n } from 'vue-i18n';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation, Pagination, Autoplay, EffectCoverflow } from 'swiper/modules';
@@ -50,9 +50,7 @@ const loadData = async () => {
             personalizedMv(),
         ]);
 
-        const authorsRes = await fetch('http://127.0.0.1:8788/api/authors/popular')
-            .then(r => r.json())
-            .catch(() => []);
+        const authorsRes = await getPopularAuthors().catch(() => []);
 
         state.banners = transformBanners(b as Record<string, unknown>, 6);
         state.recommendPlaylists = transformPlaylists(
@@ -64,7 +62,7 @@ const loadData = async () => {
         state.artists = authorsRes.map((author: any) => ({
             id: author.id,
             name: author.name,
-            picUrl: `http://127.0.0.1:5174/api/authors/avatar?key=${author.avatar_path}#`,
+            picUrl: `/r2/${author.avatar_path}`,
         }));
         state.mvs = transformMVs(m as Record<string, unknown>, 6);
     } finally {

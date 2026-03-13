@@ -405,3 +405,10 @@ export const recommendResource = () => httpGet('/recommend/resource');
 
 /** 获取私人 FM (电台) 的歌曲，根据用户喜好无尽推送 */
 export const personalFm = () => httpGet('/personal_fm');
+
+// ═══════ 有声小说自定义接口 (/sapi) ═══════
+
+/**
+ * 获取热门主播列表
+ */
+export const getPopularAuthors = () => fetch('/sapi/authors/popular').then(r => r.json());
